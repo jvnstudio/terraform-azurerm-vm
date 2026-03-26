@@ -38,6 +38,11 @@ output "web_vm_public_ip" {
   value       = var.enable_public_web_vm ? azurerm_public_ip.web[0].ip_address : null
 }
 
+output "web_vm_private_ip" {
+  description = "The private IP address of the web VM (use this from privateVM)."
+  value       = var.enable_public_web_vm ? azurerm_network_interface.web[0].private_ip_address : null
+}
+
 output "web_vm_url" {
   description = "The URL to access the web app."
   value       = var.enable_public_web_vm ? "http://${azurerm_public_ip.web[0].ip_address}" : null

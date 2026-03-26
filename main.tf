@@ -60,6 +60,14 @@ resource "azurerm_subnet" "vm" {
   address_prefixes     = [var.subnet_address_prefix]
 }
 
+resource "azurerm_subnet" "web" {
+  count                = var.enable_public_web_vm ? 1 : 0
+  name                 = "${var.vm_hostname}-web-subnet"
+  resource_group_name  = azurerm_resource_group.vm.name
+  virtual_network_name = azurerm_virtual_network.vm.name
+  address_prefixes     = [var.web_subnet_address_prefix]
+}
+
 # --- NAT Gateway (outbound internet for private VMs) ---
 
 resource "azurerm_public_ip" "nat" {
@@ -108,14 +116,38 @@ resource "azurerm_network_security_group" "vm" {
   tags                = local.effective_tags
 
   security_rule {
-    name                       = "allow-ssh"
+    name                       = "allow-ssh-from-bastion"
     priority                   = 100
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "22"
-    source_address_prefix      = var.enable_bastion ? var.vnet_address_space : "*"
+    source_address_prefix      = var.enable_bastion ? var.bastion_subnet_address_prefix : "*"
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "allow-outbound-to-web-subnet"
+    priority                   = 100
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = var.subnet_address_prefix
+    destination_address_prefix = var.enable_public_web_vm ? var.web_subnet_address_prefix : "*"
+  }
+
+  security_rule {
+    name                       = "deny-inbound-all"
+    priority                   = 4096
+    direction                  = "Inbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
 }
@@ -421,7 +453,7 @@ resource "azurerm_network_security_group" "web" {
   }
 
   security_rule {
-    name                       = "allow-ssh"
+    name                       = "allow-ssh-from-admin"
     priority                   = 120
     direction                  = "Inbound"
     access                     = "Allow"
@@ -429,6 +461,30 @@ resource "azurerm_network_security_group" "web" {
     source_port_range          = "*"
     destination_port_range     = "22"
     source_address_prefix      = local.effective_admin_source_ip
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "allow-ssh-from-private-subnet"
+    priority                   = 130
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = var.subnet_address_prefix
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "deny-inbound-all"
+    priority                   = 4096
+    direction                  = "Inbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
 }
@@ -451,7 +507,7 @@ resource "azurerm_network_interface" "web" {
 
   ip_configuration {
     name                          = "ipconfig-web"
-    subnet_id                     = azurerm_subnet.vm.id
+    subnet_id                     = azurerm_subnet.web[0].id
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id          = azurerm_public_ip.web[0].id
   }
@@ -498,6 +554,7 @@ resource "local_file" "ansible_inventory" {
   filename = local.ansible_inventory_output_path
   content = templatefile("${path.module}/ansible/inventory.tpl", {
     web_vm_public_ip    = var.enable_public_web_vm ? azurerm_public_ip.web[0].ip_address : ""
+    web_vm_private_ip   = var.enable_public_web_vm ? azurerm_network_interface.web[0].private_ip_address : ""
     private_vm_ips      = azurerm_network_interface.vm[*].private_ip_address
     admin_username      = var.admin_username
     ssh_key_path        = var.ssh_key

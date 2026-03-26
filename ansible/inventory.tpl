@@ -1,6 +1,6 @@
 %{ if enable_web_vm ~}
 [webservers]
-${web_vm_public_ip} ansible_user=${admin_username} ansible_ssh_private_key_file=${replace(ssh_key_path, ".pub", "")}
+${web_vm_public_ip} ansible_user=${admin_username} ansible_ssh_private_key_file=${replace(ssh_key_path, ".pub", "")} private_ip=${web_vm_private_ip}
 %{ endif ~}
 
 %{ if length(private_vm_ips) > 0 ~}
@@ -12,6 +12,9 @@ ${ip} ansible_user=${admin_username} ansible_ssh_private_key_file=${replace(ssh_
 
 [all:vars]
 ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+%{ if enable_web_vm ~}
+web_vm_private_ip=${web_vm_private_ip}
+%{ endif ~}
 %{ if enable_bastion ~}
 
 [private:vars]

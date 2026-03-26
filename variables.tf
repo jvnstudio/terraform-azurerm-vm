@@ -215,6 +215,12 @@ variable "enable_bastion" {
   default     = false
 }
 
+variable "web_subnet_address_prefix" {
+  description = "The address prefix for the web VM subnet."
+  type        = string
+  default     = "10.0.3.0/24"
+}
+
 variable "bastion_subnet_address_prefix" {
   description = "The address prefix for the AzureBastionSubnet. Must be at least /26."
   type        = string
