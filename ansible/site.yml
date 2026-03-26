@@ -1,0 +1,6 @@
+---
+# Master playbook — run all configurations
+# Usage: cd ansible && ansible-playbook site.yml
+
+- import_playbook: playbooks/base.yml
+- import_playbook: playbooks/webserver.yml

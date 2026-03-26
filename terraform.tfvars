@@ -1,0 +1,14 @@
+location             = "westus"
+resource_group_name  = "terraform-compute"
+vm_hostname          = "myvm"
+vm_os_simple         = "UbuntuServer"
+vm_size              = "Standard_D2s_v3"
+nb_instances         = 1
+admin_username       = "azureuser"
+ssh_key              = "~/.ssh/azure_rsa.pub"
+nb_public_ip         = 0
+public_ip_dns        = [""]
+enable_nat_gateway   = true
+enable_bastion       = true
+enable_public_web_vm = true
+admin_source_ip      = "YOUR_PUBLIC_IP"

@@ -286,3 +286,19 @@ __pycache__/
 *.btm.cs
 *.odx.cs
 *.xsd.cs
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Generated Ansible inventories
+ansible/inventory.ini
+ansible/inventories/*/hosts.ini

@@ -1,0 +1,36 @@
+---
+- name: Base configuration for all VMs
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install common packages
+      apt:
+        name:
+          - curl
+          - wget
+          - vim
+          - htop
+          - unzip
+          - net-tools
+        state: present
+
+    - name: Set timezone
+      timezone:
+        name: UTC
+
+    - name: Enable UFW with default deny
+      ufw:
+        state: enabled
+        policy: deny
+
+    - name: Allow SSH through UFW
+      ufw:
+        rule: allow
+        port: "22"
+        proto: tcp

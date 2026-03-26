@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CloudForce Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #0078d4 0%, #5c2d91 50%, #e3008c 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .card { background: white; border-radius: 16px; padding: 3rem; max-width: 650px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; }
+    .logo { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .logo .cloud { color: #0078d4; }
+    .logo .force { color: #5c2d91; }
+    .subtitle { color: #718096; font-size: 1rem; margin-bottom: 1.5rem; }
+    .badges { display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .badge { display: inline-block; padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+    .badge-azure { background: #0078d4; color: white; }
+    .badge-terraform { background: #7b42bc; color: white; }
+    .badge-ansible { background: #e00; color: white; }
+    p { color: #718096; line-height: 1.6; margin-bottom: 1.5rem; }
+    .info { background: #f7fafc; border-radius: 8px; padding: 1.2rem; text-align: left; font-family: 'SF Mono', SFMono-Regular, Consolas, monospace; font-size: 0.85rem; color: #4a5568; }
+    .info div { padding: 0.35rem 0; border-bottom: 1px solid #edf2f7; }
+    .info div:last-child { border-bottom: none; }
+    .label { color: #a0aec0; }
+    .footer { margin-top: 1.5rem; color: #cbd5e0; font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo"><span class="cloud">Cloud</span><span class="force">Force</span></div>
+    <p class="subtitle">Azure + Ansible Infrastructure Demo</p>
+    <div class="badges">
+      <span class="badge badge-azure">Azure</span>
+      <span class="badge badge-terraform">Terraform</span>
+      <span class="badge badge-ansible">Ansible</span>
+    </div>
+    <p>This application is running on an Azure Linux VM, provisioned with Terraform and configured with Ansible — demonstrating end-to-end infrastructure as code.</p>
+    <div class="info">
+      <div><span class="label">Hostname:</span> {{ ansible_hostname }}</div>
+      <div><span class="label">Region:</span> {{ azure_region | default('westus') }}</div>
+      <div><span class="label">VNet:</span> cloudforce-vnet</div>
+      <div><span class="label">Private IP:</span> {{ ansible_default_ipv4.address }}</div>
+      <div><span class="label">OS:</span> {{ ansible_distribution }} {{ ansible_distribution_version }}</div>
+      <div><span class="label">Web Server:</span> Nginx</div>
+      <div><span class="label">Provisioned by:</span> Terraform</div>
+      <div><span class="label">Configured by:</span> Ansible</div>
+    </div>
+    <div class="footer">CloudForce Demo &mdash; Infrastructure as Code</div>
+  </div>
+</body>
+</html>
