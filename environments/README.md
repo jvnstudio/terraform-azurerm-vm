@@ -70,3 +70,59 @@ Swap `dev` for `uat` or `prod` as needed.
 ## Important Note
 
 Do not deploy multiple environments into the same Terraform workspace. If you do, Terraform will treat them as one state and try to replace or reuse the wrong resources.
+
+## Jenkins
+
+A sample declarative pipeline is provided in `Jenkinsfile`.
+
+The pipeline:
+- validates Terraform
+- deploys `dev`, then `uat`, then `prod`
+- pauses for manual approval before `prod`
+- runs Ansible against the matching generated inventory for each environment
+
+Useful Jenkins job parameters:
+- `PROMOTE_TO`: choose the highest environment to deploy in that run
+- `RUN_ANSIBLE`: toggle post-Terraform configuration with Ansible
+
+Expected Jenkins credentials:
+- `azure-arm-client-id` as Secret Text
+- `azure-arm-client-secret` as Secret Text
+- `azure-arm-subscription-id` as Secret Text
+- `azure-arm-tenant-id` as Secret Text
+- `azure-vm-ssh-key` as SSH Username with private key
+
+Expected Jenkins agent tools:
+- Terraform
+- Azure CLI
+- Ansible
+- OpenSSH tools including `ssh-keygen`
+
+### Create The Pipeline Job In Jenkins UI
+
+1. In Jenkins, click **New Item**.
+2. Enter a job name such as `terraform-azurerm-vm-pipeline`.
+3. Select **Pipeline** and click **OK**.
+4. In **General**, optionally check **This project is parameterized** if you want Jenkins to expose the parameters early, although the `Jenkinsfile` already defines them.
+5. In **Pipeline**, set **Definition** to **Pipeline script from SCM**.
+6. Set **SCM** to **Git**.
+7. Enter your repo URL, for example `https://github.com/jvnstudio/terraform-azurerm-vm.git`.
+8. Add Jenkins Git credentials if the repo is private.
+9. Set **Branches to build** to `*/master`.
+10. Set **Script Path** to `Jenkinsfile`.
+11. Click **Save**.
+12. Click **Build with Parameters** and choose:
+    - `PROMOTE_TO=dev` to deploy testing only
+    - `PROMOTE_TO=uat` to deploy dev then uat
+    - `PROMOTE_TO=prod` to deploy dev then uat then prod
+    - `RUN_ANSIBLE=true` to apply the Ansible configuration after Terraform
+
+### First Run Checklist
+
+Before the first Jenkins run, make sure:
+- the Jenkins agent can run `terraform`, `az`, `ansible`, and `ssh-keygen`
+- the Azure service principal has permission to create and manage resources in the target subscription
+- the `azure-vm-ssh-key` credential contains the private key that matches the public key path used by Terraform
+- the Jenkins job can reach Azure and the provisioned VMs over the required network paths
+- manual approval for prod is allowed for the users who will operate this pipeline
+
