@@ -1,6 +1,8 @@
 location             = "westus"
 resource_group_name  = "terraform-compute"
 vm_hostname          = "myvm"
+private_vm_name      = "privateVM"
+public_web_vm_name   = "publicWebapp"
 vm_os_simple         = "UbuntuServer"
 vm_size              = "Standard_D2s_v3"
 nb_instances         = 1

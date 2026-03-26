@@ -5,20 +5,20 @@
 ```
 Internet
     |
-    |--- HTTP (port 80) ---> [myvm-web] Public Web VM (nginx)
+    |--- HTTP (port 80) ---> [publicWebapp] Public Web VM (nginx)
     |                              |
     |                         [10.0.1.0/24 subnet]
     |                              |
-    |--- Azure Bastion -------> [myvm0] Private VM (no public IP)
+    |--- Azure Bastion -------> [privateVM] Private VM (no public IP)
          (browser SSH or          |
           native SSH)        [10.0.2.0/26 AzureBastionSubnet]
     |
-[myvm-vnet 10.0.0.0/16]
+[cloudforce-vnet 10.0.0.0/16]
 ```
 
 **Two VMs:**
-- `myvm0` — Private Linux VM, no public IP, accessible only through Azure Bastion
-- `myvm-web` — Public Linux VM running nginx, accessible from the internet on port 80
+- `privateVM` — Private Linux VM, no public IP, accessible only through Azure Bastion
+- `publicWebapp` — Public Linux VM running nginx, accessible from the internet on port 80
 
 **Tools:**
 - **Terraform** provisions infrastructure (VMs, networking, Bastion)
@@ -59,7 +59,9 @@ Edit `terraform.tfvars` to match your environment:
 ```hcl
 location             = "westus"
 resource_group_name  = "terraform-compute"
-vm_hostname          = "myvm"
+vm_hostname          = "myvm"              # Prefix for shared Azure resources
+private_vm_name      = "privateVM"
+public_web_vm_name   = "publicWebapp"
 vm_os_simple         = "UbuntuServer"
 vm_size              = "Standard_D2s_v3"
 nb_instances         = 1
@@ -108,9 +110,9 @@ terraform apply
 | Web Public IP | 1 | Standard/Static |
 | NICs | 2 | One per VM |
 | Availability Set | 1 | For the private VM |
-| Private Linux VM | 1 | myvm0 |
-| Public Web VM | 1 | myvm-web |
-| Ansible Inventory | 1 | Auto-generated at ansible/inventory.ini |
+| Private Linux VM | 1 | privateVM |
+| Public Web VM | 1 | publicWebapp |
+| Ansible Inventory | 1 | Auto-generated at ansible/inventories/<env>/hosts.ini |
 
 **Note:** Bastion takes ~5-10 minutes to provision. The web page will NOT work yet — Ansible hasn't run.
 
@@ -122,7 +124,7 @@ terraform apply
 cd ansible
 
 # Run all playbooks (base config + web server)
-ansible-playbook site.yml --limit webservers
+ansible-playbook -i inventories/dev/hosts.ini site.yml --limit webservers
 ```
 
 This runs two playbooks in sequence:
@@ -167,7 +169,7 @@ az network bastion ssh \
 ```
 
 ### SSH to the private VM via Azure Portal
-1. Go to Azure Portal > Virtual Machines > `myvm0`
+1. Go to Azure Portal > Virtual Machines > `privateVM`
 2. Click **Connect** > **Bastion**
 3. Username: `azureuser`
 4. Authentication Type: **SSH Private Key from Local File**
@@ -189,26 +191,26 @@ The key benefit of Ansible: change VM config without reprovisioning.
 Edit `ansible/templates/index.html.j2`, then:
 ```bash
 cd ansible
-ansible-playbook playbooks/webserver.yml
+ansible-playbook -i inventories/dev/hosts.ini playbooks/webserver.yml
 ```
 
 ### Install new packages on all VMs
 Edit `ansible/playbooks/base.yml`, add packages to the list, then:
 ```bash
 cd ansible
-ansible-playbook playbooks/base.yml
+ansible-playbook -i inventories/dev/hosts.ini playbooks/base.yml
 ```
 
 ### Run a one-off command on all reachable VMs
 ```bash
 cd ansible
-ansible webservers -m shell -a "uptime"
+ansible -i inventories/dev/hosts.ini webservers -m shell -a "uptime"
 ```
 
 ### Run everything
 ```bash
 cd ansible
-ansible-playbook site.yml
+ansible-playbook -i inventories/dev/hosts.ini site.yml
 ```
 
 ---
@@ -227,7 +229,9 @@ terraform-azurerm-vm/
   ansible/
     ansible.cfg            # Ansible connection settings
     inventory.tpl          # Inventory template (Terraform populates)
-    inventory.ini          # Generated inventory (don't edit)
+    inventories/
+      dev/
+        hosts.ini        # Generated inventory (don't edit)
     site.yml               # Master playbook (runs all)
     playbooks/
       base.yml             # Common config for all VMs

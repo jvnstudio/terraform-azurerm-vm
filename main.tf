@@ -127,7 +127,7 @@ resource "azurerm_storage_account" "vm-sa" {
 
 resource "azurerm_linux_virtual_machine" "vm-linux" {
   count                 = !contains([var.vm_os_simple, var.vm_os_offer], "WindowsServer") && !var.is_windows_image && !var.data_disk ? var.nb_instances : 0
-  name                  = "${var.vm_hostname}${count.index}"
+  name                  = local.private_vm_names[count.index]
   location              = var.location
   resource_group_name   = azurerm_resource_group.vm.name
   availability_set_id   = azurerm_availability_set.vm.id
@@ -147,7 +147,7 @@ resource "azurerm_linux_virtual_machine" "vm-linux" {
   }
 
   os_disk {
-    name                 = "osdisk-${var.vm_hostname}-${count.index}"
+    name                 = "osdisk-${local.private_vm_names[count.index]}"
     caching              = "ReadWrite"
     storage_account_type = var.storage_account_type
   }
@@ -164,7 +164,7 @@ resource "azurerm_linux_virtual_machine" "vm-linux" {
 
 resource "azurerm_linux_virtual_machine" "vm-linux-with-datadisk" {
   count                 = !contains([var.vm_os_simple, var.vm_os_offer], "WindowsServer") && !var.is_windows_image && var.data_disk ? var.nb_instances : 0
-  name                  = "${var.vm_hostname}${count.index}"
+  name                  = local.private_vm_names[count.index]
   location              = var.location
   resource_group_name   = azurerm_resource_group.vm.name
   availability_set_id   = azurerm_availability_set.vm.id
@@ -185,7 +185,7 @@ resource "azurerm_linux_virtual_machine" "vm-linux-with-datadisk" {
   }
 
   os_disk {
-    name                 = "osdisk-${var.vm_hostname}-${count.index}"
+    name                 = "osdisk-${local.private_vm_names[count.index]}"
     caching              = "ReadWrite"
     storage_account_type = var.storage_account_type
   }
@@ -202,7 +202,7 @@ resource "azurerm_linux_virtual_machine" "vm-linux-with-datadisk" {
 
 resource "azurerm_managed_disk" "datadisk" {
   count                = !contains([var.vm_os_simple, var.vm_os_offer], "WindowsServer") && !var.is_windows_image && var.data_disk ? var.nb_instances : 0
-  name                 = "datadisk-${var.vm_hostname}-${count.index}"
+  name                 = "datadisk-${local.private_vm_names[count.index]}"
   location             = var.location
   resource_group_name  = azurerm_resource_group.vm.name
   storage_account_type = var.data_sa_type
@@ -221,7 +221,7 @@ resource "azurerm_virtual_machine_data_disk_attachment" "datadisk" {
 
 resource "azurerm_windows_virtual_machine" "vm-windows" {
   count                 = ((var.vm_os_id != "" && var.is_windows_image) || contains([var.vm_os_simple, var.vm_os_offer], "WindowsServer")) && !var.data_disk ? var.nb_instances : 0
-  name                  = "${var.vm_hostname}${count.index}"
+  name                  = local.private_vm_names[count.index]
   location              = var.location
   resource_group_name   = azurerm_resource_group.vm.name
   availability_set_id   = azurerm_availability_set.vm.id
@@ -238,7 +238,7 @@ resource "azurerm_windows_virtual_machine" "vm-windows" {
   }
 
   os_disk {
-    name                 = "osdisk-${var.vm_hostname}-${count.index}"
+    name                 = "osdisk-${local.private_vm_names[count.index]}"
     caching              = "ReadWrite"
     storage_account_type = var.storage_account_type
   }
@@ -255,7 +255,7 @@ resource "azurerm_windows_virtual_machine" "vm-windows" {
 
 resource "azurerm_windows_virtual_machine" "vm-windows-with-datadisk" {
   count                 = ((var.vm_os_id != "" && var.is_windows_image) || contains([var.vm_os_simple, var.vm_os_offer], "WindowsServer")) && var.data_disk ? var.nb_instances : 0
-  name                  = "${var.vm_hostname}${count.index}"
+  name                  = local.private_vm_names[count.index]
   location              = var.location
   resource_group_name   = azurerm_resource_group.vm.name
   availability_set_id   = azurerm_availability_set.vm.id
@@ -272,7 +272,7 @@ resource "azurerm_windows_virtual_machine" "vm-windows-with-datadisk" {
   }
 
   os_disk {
-    name                 = "osdisk-${var.vm_hostname}-${count.index}"
+    name                 = "osdisk-${local.private_vm_names[count.index]}"
     caching              = "ReadWrite"
     storage_account_type = var.storage_account_type
   }
@@ -289,7 +289,7 @@ resource "azurerm_windows_virtual_machine" "vm-windows-with-datadisk" {
 
 resource "azurerm_managed_disk" "windows-datadisk" {
   count                = ((var.vm_os_id != "" && var.is_windows_image) || contains([var.vm_os_simple, var.vm_os_offer], "WindowsServer")) && var.data_disk ? var.nb_instances : 0
-  name                 = "datadisk-${var.vm_hostname}-${count.index}"
+  name                 = "datadisk-${local.private_vm_names[count.index]}"
   location             = var.location
   resource_group_name  = azurerm_resource_group.vm.name
   storage_account_type = var.data_sa_type
@@ -452,7 +452,7 @@ resource "azurerm_network_interface_security_group_association" "web" {
 
 resource "azurerm_linux_virtual_machine" "web" {
   count                 = var.enable_public_web_vm ? 1 : 0
-  name                  = "${var.vm_hostname}-web"
+  name                  = var.public_web_vm_name
   location              = var.location
   resource_group_name   = azurerm_resource_group.vm.name
   size                  = var.vm_size
@@ -472,7 +472,7 @@ resource "azurerm_linux_virtual_machine" "web" {
   }
 
   os_disk {
-    name                 = "osdisk-${var.vm_hostname}-web"
+    name                 = "osdisk-${var.public_web_vm_name}"
     caching              = "ReadWrite"
     storage_account_type = var.storage_account_type
   }

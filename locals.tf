@@ -1,6 +1,11 @@
 locals {
   environment = lower(var.environment)
 
+  private_vm_names = [
+    for index in range(var.nb_instances) :
+    var.nb_instances == 1 ? var.private_vm_name : format("%s-%02d", var.private_vm_name, index + 1)
+  ]
+
   effective_tags = merge(
     var.tags,
     {

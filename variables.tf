@@ -82,9 +82,21 @@ variable "nb_instances" {
 }
 
 variable "vm_hostname" {
-  description = "local name of the VM"
+  description = "Prefix used for supporting Azure resources such as subnets, Bastion, and network security groups."
   type        = string
   default     = "myvm"
+}
+
+variable "private_vm_name" {
+  description = "Name to assign to the private VM resource. When multiple private VMs are created, a numeric suffix is appended."
+  type        = string
+  default     = "privateVM"
+}
+
+variable "public_web_vm_name" {
+  description = "Name to assign to the public web VM resource."
+  type        = string
+  default     = "publicWebapp"
 }
 
 variable "vm_os_simple" {
