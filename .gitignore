@@ -299,6 +299,10 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 
+# Terraform local overrides
+terraform.tfvars.local
+*.local.auto.tfvars
+
 # Generated Ansible inventories
 ansible/inventory.ini
 ansible/inventories/*/hosts.ini

@@ -46,20 +46,35 @@ Internet
 
 4. **SSH key pair** (RSA, required by Azure)
    ```bash
-   # Generate if you don't already have one
    ssh-keygen -t rsa -b 4096 -f ~/.ssh/azure_rsa -N ""
    ```
 
 ---
 
-## Step 1: Review Configuration
+## Step 1: Choose an Environment
 
-Edit `terraform.tfvars` to match your environment:
+Use the environment-specific tfvars files in `environments/`.
+
+In this repo:
+- `testing` maps to `dev`
+- `uat` maps to `uat`
+- `prod` maps to `prod`
+
+Use a separate Terraform workspace for each environment so the state does not overlap.
+
+| Stage | Workspace | tfvars file | Resource group | Ansible inventory |
+|---|---|---|---|---|
+| Testing | `dev` | `environments/dev/terraform.tfvars` | `terraform-compute-dev` | `ansible/inventories/dev/hosts.ini` |
+| UAT | `uat` | `environments/uat/terraform.tfvars` | `terraform-compute-uat` | `ansible/inventories/uat/hosts.ini` |
+| Prod | `prod` | `environments/prod/terraform.tfvars` | `terraform-compute-prod` | `ansible/inventories/prod/hosts.ini` |
+
+Example `environments/dev/terraform.tfvars`:
 
 ```hcl
+environment          = "dev"
 location             = "westus"
-resource_group_name  = "terraform-compute"
-vm_hostname          = "myvm"              # Prefix for shared Azure resources
+resource_group_name  = "terraform-compute-dev"
+vm_hostname          = "myvmdev"           # Prefix for shared Azure resources
 private_vm_name      = "privateVM"
 public_web_vm_name   = "publicWebapp"
 vm_os_simple         = "UbuntuServer"
@@ -67,36 +82,102 @@ vm_size              = "Standard_D2s_v3"
 nb_instances         = 1
 admin_username       = "azureuser"
 ssh_key              = "~/.ssh/azure_rsa.pub"
-nb_public_ip         = 0                    # Private VM has no public IP
+nb_public_ip         = 0
 public_ip_dns        = [""]
-enable_bastion       = true                 # Creates Azure Bastion jumpbox
-enable_public_web_vm = true                 # Creates public web VM
-admin_source_ip      = "YOUR_PUBLIC_IP"     # Lock SSH to your IP
+enable_bastion       = true
+enable_public_web_vm = true
+admin_source_ip      = null                 # Auto-detect your current public IP for SSH
 ```
 
-To find your public IP:
-```bash
-curl -s ifconfig.me
+If you want to override auto-detect without committing your IP, create a local file such as `personal.local.auto.tfvars`:
+```hcl
+admin_source_ip = "73.134.101.146/32"
 ```
 
 ---
 
-## Step 2: Provision Infrastructure with Terraform
+## Step 2: Initialize Terraform Once
 
 ```bash
 cd /path/to/terraform-azurerm-vm
-
-# Initialize providers
 terraform init
-
-# Preview what will be created
-terraform plan
-
-# Apply — creates all resources
-terraform apply
 ```
 
-**What gets created:**
+---
+
+## Step 3: Spin Up Testing First
+
+If this is the first time creating the testing workspace:
+```bash
+terraform workspace new dev
+```
+
+Then select it and deploy:
+```bash
+cd /path/to/terraform-azurerm-vm
+terraform workspace select dev
+terraform plan -var-file=environments/dev/terraform.tfvars
+terraform apply -var-file=environments/dev/terraform.tfvars
+```
+
+Configure testing with Ansible:
+```bash
+cd ansible
+ansible-playbook -i inventories/dev/hosts.ini site.yml --limit webservers
+```
+
+Verify testing before promoting the same code to the next stage.
+
+---
+
+## Step 4: Promote to UAT
+
+If this is the first time creating the UAT workspace:
+```bash
+terraform workspace new uat
+```
+
+Then select it and deploy:
+```bash
+cd /path/to/terraform-azurerm-vm
+terraform workspace select uat
+terraform plan -var-file=environments/uat/terraform.tfvars
+terraform apply -var-file=environments/uat/terraform.tfvars
+```
+
+Configure UAT with Ansible:
+```bash
+cd ansible
+ansible-playbook -i inventories/uat/hosts.ini site.yml --limit webservers
+```
+
+---
+
+## Step 5: Promote to Prod
+
+If this is the first time creating the prod workspace:
+```bash
+terraform workspace new prod
+```
+
+Then select it and deploy:
+```bash
+cd /path/to/terraform-azurerm-vm
+terraform workspace select prod
+terraform plan -var-file=environments/prod/terraform.tfvars
+terraform apply -var-file=environments/prod/terraform.tfvars
+```
+
+Configure prod with Ansible:
+```bash
+cd ansible
+ansible-playbook -i inventories/prod/hosts.ini site.yml --limit webservers
+```
+
+---
+
+## Step 6: What Gets Created
+
 | Resource | Count | Purpose |
 |---|---|---|
 | Resource Group | 1 | Container for all resources |
@@ -112,61 +193,35 @@ terraform apply
 | Availability Set | 1 | For the private VM |
 | Private Linux VM | 1 | privateVM |
 | Public Web VM | 1 | publicWebapp |
-| Ansible Inventory | 1 | Auto-generated at ansible/inventories/<env>/hosts.ini |
+| Ansible Inventory | 1 | Auto-generated at `ansible/inventories/<env>/hosts.ini` |
 
-**Note:** Bastion takes ~5-10 minutes to provision. The web page will NOT work yet — Ansible hasn't run.
-
----
-
-## Step 3: Configure VMs with Ansible
-
-```bash
-cd ansible
-
-# Run all playbooks (base config + web server)
-ansible-playbook -i inventories/dev/hosts.ini site.yml --limit webservers
-```
-
-This runs two playbooks in sequence:
-
-### base.yml (all VMs)
-- Updates apt cache
-- Installs common packages (curl, wget, vim, htop, unzip, net-tools)
-- Sets timezone to UTC
-- Enables UFW firewall with default deny
-- Allows SSH through firewall
-
-### webserver.yml (webservers group only)
-- Installs nginx
-- Opens HTTP (80) and HTTPS (443) in UFW
-- Deploys the landing page from `templates/index.html.j2`
-- Starts and enables nginx
+**Note:** Bastion can take 5-10 minutes to provision. The web page will not work until Ansible has run.
 
 ---
 
-## Step 4: Verify
+## Step 7: Verify
 
 ### Check the web app
 ```bash
-# Get the public IP
 terraform output web_vm_url
-
-# Open in browser or curl
 curl http://$(terraform output -raw web_vm_public_ip)
 ```
 
-You should see a styled "Hello from Azure!" page with live system info.
-
-### SSH to the private VM via Bastion (native client)
+### SSH to the private VM in testing via Bastion
 ```bash
+terraform workspace select dev
 az network bastion ssh \
-  --name myvm-bastion \
-  --resource-group terraform-compute \
+  --name myvmdev-bastion \
+  --resource-group terraform-compute-dev \
   --target-resource-id $(terraform output -json vm_ids | jq -r '.[0]') \
   --auth-type ssh-key \
   --username azureuser \
   --ssh-key ~/.ssh/azure_rsa
 ```
+
+For UAT or prod, select the matching workspace and swap the resource group and Bastion name:
+- UAT: `terraform workspace select uat`, `terraform-compute-uat`, `myvmuat-bastion`
+- Prod: `terraform workspace select prod`, `terraform-compute-prod`, `myvmprod-bastion`
 
 ### SSH to the private VM via Azure Portal
 1. Go to Azure Portal > Virtual Machines > `privateVM`
@@ -191,26 +246,26 @@ The key benefit of Ansible: change VM config without reprovisioning.
 Edit `ansible/templates/index.html.j2`, then:
 ```bash
 cd ansible
-ansible-playbook -i inventories/dev/hosts.ini playbooks/webserver.yml
+ansible-playbook -i inventories/<env>/hosts.ini playbooks/webserver.yml
 ```
 
 ### Install new packages on all VMs
 Edit `ansible/playbooks/base.yml`, add packages to the list, then:
 ```bash
 cd ansible
-ansible-playbook -i inventories/dev/hosts.ini playbooks/base.yml
+ansible-playbook -i inventories/<env>/hosts.ini playbooks/base.yml
 ```
 
 ### Run a one-off command on all reachable VMs
 ```bash
 cd ansible
-ansible -i inventories/dev/hosts.ini webservers -m shell -a "uptime"
+ansible -i inventories/<env>/hosts.ini webservers -m shell -a "uptime"
 ```
 
 ### Run everything
 ```bash
 cd ansible
-ansible-playbook -i inventories/dev/hosts.ini site.yml
+ansible-playbook -i inventories/<env>/hosts.ini site.yml
 ```
 
 ---
@@ -222,7 +277,14 @@ terraform-azurerm-vm/
   main.tf                  # All infrastructure resources
   variables.tf             # Variable declarations
   outputs.tf               # Output values
-  terraform.tfvars         # Your configuration values
+  terraform.tfvars         # Optional single-environment local overrides
+  environments/
+    dev/
+      terraform.tfvars
+    uat/
+      terraform.tfvars
+    prod/
+      terraform.tfvars
   os/
     variables.tf           # OS image mappings
     outputs.tf             # OS image lookup logic
@@ -231,26 +293,30 @@ terraform-azurerm-vm/
     inventory.tpl          # Inventory template (Terraform populates)
     inventories/
       dev/
-        hosts.ini        # Generated inventory (don't edit)
+        hosts.ini          # Generated inventory (don't edit)
+      uat/
+        hosts.ini
+      prod/
+        hosts.ini
     site.yml               # Master playbook (runs all)
     playbooks/
       base.yml             # Common config for all VMs
-      webserver.yml         # Nginx + web app for public VM
+      webserver.yml        # Nginx + web app for public VM
     templates/
       index.html.j2        # Web app landing page (Jinja2)
-    roles/                 # For future role-based organization
 ```
 
 ---
 
 ## Tear Down
 
-To destroy all resources:
+Destroy one environment at a time:
 ```bash
-terraform destroy
+terraform workspace select dev
+terraform destroy -var-file=environments/dev/terraform.tfvars
 ```
 
-This removes everything from Azure. The Ansible files and Terraform config remain locally.
+Swap `dev` for `uat` or `prod` as needed.
 
 ---
 
@@ -258,9 +324,7 @@ This removes everything from Azure. The Ansible files and Terraform config remai
 
 | Problem | Solution |
 |---|---|
-| `SkuNotAvailable` | Run `az vm list-skus --location westus --output table` and pick an available size |
-| SSH timeout to web VM | Check `admin_source_ip` in tfvars matches your current public IP (`curl ifconfig.me`) |
-| Bastion won't connect | Bastion takes 5-10 min to provision. Check it's in "Succeeded" state in the portal |
-| Ansible `UNREACHABLE` | Ensure NSG allows SSH from your IP and the VM has finished booting |
-| Web page blank | Run `ansible-playbook playbooks/webserver.yml` — nginx isn't installed until Ansible runs |
-| `command not found: ansible-playbook` | Run `pip3 install ansible` |
+| Wrong environment targeted | Check `terraform workspace show` and make sure it matches the tfvars file you are using |
+| SSH timeout to web VM | Leave `admin_source_ip = null` for auto-detect, or if you set it manually make sure it matches your current public IP/CIDR |
+| Bastion won't connect | Bastion takes 5-10 min to provision. Check that it is in `Succeeded` state in the Azure portal |
+| Ansible `UNREACHABLE` | Make sure Terraform finished, the VM completed boot, and you are using the matching `ansible/inventories/<env>/hosts.ini` file |

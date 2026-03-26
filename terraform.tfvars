@@ -13,4 +13,4 @@ public_ip_dns        = [""]
 enable_nat_gateway   = true
 enable_bastion       = true
 enable_public_web_vm = true
-admin_source_ip      = "73.134.101.146"
+admin_source_ip      = null

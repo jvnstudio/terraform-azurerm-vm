@@ -14,7 +14,7 @@ nb_public_ip         = 0
 public_ip_dns        = [""]
 enable_bastion       = true
 enable_public_web_vm = true
-admin_source_ip      = "YOUR_PUBLIC_IP"
+admin_source_ip      = null
 boot_diagnostics     = true
 
 tags = {

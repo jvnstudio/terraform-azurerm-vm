@@ -192,9 +192,9 @@ variable "data_disk" {
 }
 
 variable "admin_source_ip" {
-  description = "Your public IP address for SSH access to the web VM. Use '*' to allow from anywhere (not recommended)."
+  description = "Optional source IP or CIDR allowed to SSH to the public web VM. Leave null or empty to auto-detect your current public IP. Use '*' to allow from anywhere (not recommended)."
   type        = string
-  default     = "*"
+  default     = null
 }
 
 variable "enable_public_web_vm" {

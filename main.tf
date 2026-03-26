@@ -14,11 +14,24 @@ terraform {
       source  = "hashicorp/local"
       version = "~> 2.0"
     }
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.0"
+    }
   }
 }
 
 provider "azurerm" {
   features {}
+}
+
+data "http" "current_public_ip" {
+  count = var.enable_public_web_vm && trimspace(var.admin_source_ip != null ? var.admin_source_ip : "") == "" ? 1 : 0
+  url   = "https://api.ipify.org"
+
+  request_headers = {
+    Accept = "text/plain"
+  }
 }
 
 module "os" {
@@ -415,7 +428,7 @@ resource "azurerm_network_security_group" "web" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "22"
-    source_address_prefix      = var.admin_source_ip
+    source_address_prefix      = local.effective_admin_source_ip
     destination_address_prefix = "*"
   }
 }
