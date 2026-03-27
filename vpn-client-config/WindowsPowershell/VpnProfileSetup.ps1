@@ -48,7 +48,7 @@ $EAP = '<EapHostConfig
 					<FilteringInfo
 						xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV3">
 						<CAHashList Enabled="true">
-							<IssuerHash>5B C4 59 E3 22 A1 8B B2 C6 0A C1 39 36 CD C3 0B 8A B2 26 69 </IssuerHash>
+							<IssuerHash>3C 96 01 A4 11 86 C7 AA CB B6 47 AE 9E B4 20 26 56 21 CF A2 </IssuerHash>
 
 						</CAHashList>
 					</FilteringInfo>
