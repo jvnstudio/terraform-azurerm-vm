@@ -6,7 +6,7 @@
 #   vpn-certs/rootCA.pem          - Root CA certificate
 #   vpn-certs/rootCA.key          - Root CA private key
 #   vpn-certs/rootCA.base64       - Base64 cert data (paste into Terraform)
-#   vpn-certs/client.pem          - Client certificate
+#   vpn-certs/client.pem          - Client certificate (with clientAuth EKU)
 #   vpn-certs/client.key          - Client private key
 #   vpn-certs/client.pfx          - Client PKCS#12 bundle (for macOS/Windows import)
 
@@ -24,7 +24,16 @@ openssl req -x509 -new -nodes \
   -subj "/CN=CloudForceVPNRootCA" \
   2>/dev/null
 
-echo "==> Generating client certificate..."
+echo "==> Generating client certificate with clientAuth EKU..."
+
+# Create extensions config (Azure requires clientAuth EKU)
+cat > "$CERT_DIR/client-ext.cnf" <<'EOF'
+[client_ext]
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth
+EOF
+
 openssl req -new -nodes \
   -newkey rsa:2048 \
   -keyout "$CERT_DIR/client.key" \
@@ -39,17 +48,23 @@ openssl x509 -req \
   -CAcreateserial \
   -out "$CERT_DIR/client.pem" \
   -days 3650 \
+  -extfile "$CERT_DIR/client-ext.cnf" \
+  -extensions client_ext \
   2>/dev/null
 
-rm -f "$CERT_DIR/client.csr" "$CERT_DIR/rootCA.srl"
+rm -f "$CERT_DIR/client.csr" "$CERT_DIR/rootCA.srl" "$CERT_DIR/client-ext.cnf"
 
-echo "==> Creating client .pfx bundle (press Enter for empty password)..."
+echo "==> Creating client .pfx bundle..."
+# Use legacy format for macOS Keychain compatibility (SHA1 + 3DES-CBC)
 openssl pkcs12 -export \
   -out "$CERT_DIR/client.pfx" \
   -inkey "$CERT_DIR/client.key" \
   -in "$CERT_DIR/client.pem" \
   -certfile "$CERT_DIR/rootCA.pem" \
-  -passout pass:
+  -passout pass: \
+  -macalg sha1 \
+  -keypbe pbeWithSHA1And3-KeyTripleDES-CBC \
+  -certpbe pbeWithSHA1And3-KeyTripleDES-CBC
 
 echo "==> Extracting Base64 root cert data for Terraform..."
 openssl x509 -in "$CERT_DIR/rootCA.pem" -outform der | base64 > "$CERT_DIR/rootCA.base64"
@@ -67,9 +82,9 @@ echo "     vpn_root_cert_data = \"$(cat "$CERT_DIR/rootCA.base64")\""
 echo ""
 echo "  2. Run: terraform apply"
 echo ""
-echo "  3. Import the client cert on your Mac:"
-echo "     open $CERT_DIR/client.pfx"
-echo "     (This opens Keychain Access — click Add, leave password empty)"
+echo "  3. Import the client cert on your client machine:"
+echo "     macOS:   open $CERT_DIR/client.pfx  (leave password empty)"
+echo "     Windows: double-click $CERT_DIR/client.pfx (Current User > Personal)"
 echo ""
 echo "  4. Download the VPN client config from Azure:"
 echo "     az network vnet-gateway vpn-client generate \\"
@@ -77,4 +92,5 @@ echo "       --name myvm-vpngw \\"
 echo "       --resource-group terraform-compute \\"
 echo "       --output tsv"
 echo ""
-echo "  5. Install Azure VPN Client from the App Store and import the config."
+echo "  5. Connect using OpenVPN Connect (macOS/Windows) or native IKEv2."
+echo "     See VPN-SETUP.md for detailed instructions."

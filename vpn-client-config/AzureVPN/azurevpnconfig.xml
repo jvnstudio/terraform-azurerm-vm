@@ -3,7 +3,7 @@
   <clientauth>
     <aad i:nil="true" />
     <cert>
-      <hash i:nil="true" />
+      <hash>c84885335772af1f723c04061107e4ee2778f8f1</hash>
       <issuer>3c9601a41186c7aacbb647ae9eb420265621cfa2</issuer>
     </cert>
     <type>cert</type>
