@@ -149,16 +149,29 @@ unzip vpn-client.zip -d vpn-client-config
 
 ## Step 7: Verify Connectivity
 
-Once connected:
+Once connected, your Mac gets an IP from `172.16.0.0/24` and can reach everything in the VNet directly.
+
+### Quick reference IPs
+
+| Resource | IP |
+|---|---|
+| VPN Gateway (public) | `terraform output vpn_gateway_public_ip` |
+| privateVM (private) | 10.0.1.4 |
+| publicWebapp (private) | 10.0.3.4 |
+| publicWebapp (public) | `terraform output web_vm_public_ip` |
+| Your VPN client | 172.16.0.x (assigned on connect) |
+
+### Test commands
 
 ```bash
 # Check your VPN-assigned IP (should be 172.16.0.x)
 ifconfig utun0    # or utun1, utun2 — check which tunnel is active
 
-# SSH directly to privateVM using its private IP
+# SSH directly to privateVM using its private IP (no Bastion needed!)
 ssh -i ~/.ssh/azure_rsa azureuser@10.0.1.4
 
-# Reach publicWebapp internally
+# Reach publicWebapp over internal network
+ssh -i ~/.ssh/azure_rsa azureuser@10.0.3.4
 curl http://10.0.3.4
 
 # Verify DNS resolution (if using Azure DNS)
