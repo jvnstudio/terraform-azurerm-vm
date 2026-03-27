@@ -57,3 +57,8 @@ output "bastion_dns_name" {
   description = "The FQDN of the Azure Bastion host."
   value       = var.enable_bastion ? azurerm_bastion_host.vm[0].dns_name : null
 }
+
+output "vpn_gateway_public_ip" {
+  description = "The public IP address of the VPN Gateway."
+  value       = var.enable_vpn_gateway ? azurerm_public_ip.vpn[0].ip_address : null
+}

@@ -1,6 +1,16 @@
 terraform {
   required_version = ">= 1.0"
 
+  # Remote state in Azure Storage — shared across Jenkins agents and local dev.
+  # Run ./bootstrap-backend.sh once to create the storage account before first use.
+  # Pass -backend-config=backend.hcl on init, or set ARM_ACCESS_KEY env var.
+  backend "azurerm" {
+    resource_group_name  = "terraform-state-rg"
+    storage_account_name = "tfstatecloudforce"
+    container_name       = "tfstate"
+    key                  = "cloudforce.tfstate"
+  }
+
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
@@ -125,6 +135,21 @@ resource "azurerm_network_security_group" "vm" {
     destination_port_range     = "22"
     source_address_prefix      = var.enable_bastion ? var.bastion_subnet_address_prefix : "*"
     destination_address_prefix = "*"
+  }
+
+  dynamic "security_rule" {
+    for_each = var.enable_vpn_gateway ? [1] : []
+    content {
+      name                       = "allow-ssh-from-vpn-clients"
+      priority                   = 110
+      direction                  = "Inbound"
+      access                     = "Allow"
+      protocol                   = "Tcp"
+      source_port_range          = "*"
+      destination_port_range     = "22"
+      source_address_prefix      = var.vpn_client_address_pool
+      destination_address_prefix = "*"
+    }
   }
 
   security_rule {
@@ -414,6 +439,56 @@ resource "azurerm_bastion_host" "vm" {
     name                 = "bastion-ipconfig"
     subnet_id            = azurerm_subnet.bastion[0].id
     public_ip_address_id = azurerm_public_ip.bastion[0].id
+  }
+
+  tags = local.effective_tags
+}
+
+# --- P2S VPN Gateway ---
+
+resource "azurerm_subnet" "gateway" {
+  count                = var.enable_vpn_gateway ? 1 : 0
+  name                 = "GatewaySubnet"
+  resource_group_name  = azurerm_resource_group.vm.name
+  virtual_network_name = azurerm_virtual_network.vm.name
+  address_prefixes     = [var.vpn_gateway_subnet_address_prefix]
+}
+
+resource "azurerm_public_ip" "vpn" {
+  count               = var.enable_vpn_gateway ? 1 : 0
+  name                = "${var.vm_hostname}-vpngw-pip"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.vm.name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+  tags                = local.effective_tags
+}
+
+resource "azurerm_virtual_network_gateway" "vpn" {
+  count               = var.enable_vpn_gateway ? 1 : 0
+  name                = "${var.vm_hostname}-vpngw"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.vm.name
+
+  type     = "Vpn"
+  vpn_type = "RouteBased"
+  sku      = "VpnGw1"
+
+  ip_configuration {
+    name                          = "vpngw-ipconfig"
+    public_ip_address_id          = azurerm_public_ip.vpn[0].id
+    private_ip_address_allocation = "Dynamic"
+    subnet_id                     = azurerm_subnet.gateway[0].id
+  }
+
+  vpn_client_configuration {
+    address_space        = [var.vpn_client_address_pool]
+    vpn_client_protocols = ["IkeV2", "OpenVPN"]
+
+    root_certificate {
+      name             = var.vpn_root_cert_name
+      public_cert_data = var.vpn_root_cert_data
+    }
   }
 
   tags = local.effective_tags

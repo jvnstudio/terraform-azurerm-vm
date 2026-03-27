@@ -14,9 +14,37 @@ Each environment should use:
 - its own tfvars file
 - its own generated Ansible inventory
 
+## Remote State Backend
+
+Terraform state is stored in Azure Storage so it's shared between local dev and Jenkins.
+
+**First-time setup** (run once):
+```bash
+./bootstrap-backend.sh
+```
+
+This creates:
+- Resource group: `terraform-state-rg`
+- Storage account: `tfstatecloudforce`
+- Blob container: `tfstate`
+
+Then initialize with the storage key:
+```bash
+export ARM_ACCESS_KEY="<key from bootstrap output>"
+terraform init
+```
+
+Or use a backend config file:
+```bash
+echo 'access_key = "<key>"' > backend.hcl
+terraform init -backend-config=backend.hcl
+```
+
+For Jenkins, store the key as credential `azure-tf-state-access-key`.
+
 ## Terraform
 
-Initialize once:
+Initialize once (after backend setup):
 
 ```bash
 terraform init
@@ -90,6 +118,7 @@ Expected Jenkins credentials:
 - `azure-arm-client-secret` as Secret Text
 - `azure-arm-subscription-id` as Secret Text
 - `azure-arm-tenant-id` as Secret Text
+- `azure-tf-state-access-key` as Secret Text (storage account key from `bootstrap-backend.sh`)
 - `azure-vm-ssh-key` as SSH Username with private key
 
 Expected Jenkins agent tools:

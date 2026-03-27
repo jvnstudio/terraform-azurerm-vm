@@ -303,6 +303,12 @@ override.tf.json
 terraform.tfvars.local
 *.local.auto.tfvars
 
+# Backend config (contains storage key)
+backend.hcl
+
+# VPN certificates (private keys)
+vpn-certs/
+
 # Generated Ansible inventories
 ansible/inventory.ini
 ansible/inventories/*/hosts.ini

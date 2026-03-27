@@ -1,0 +1,34 @@
+<AzVpnProfile xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.datacontract.org/2004/07/">
+  <any xmlns:d2p1="http://schemas.datacontract.org/2004/07/System.Xml" i:nil="true" />
+  <clientauth>
+    <aad i:nil="true" />
+    <cert>
+      <hash i:nil="true" />
+      <issuer>5bc459e322a18bb2c60ac13936cdc30b8ab22669</issuer>
+    </cert>
+    <type>cert</type>
+    <usernamepass i:nil="true" />
+  </clientauth>
+  <clientconfig i:nil="true" />
+  <name>cloudforce-vnet</name>
+  <protocolconfig>
+    <sslprotocolConfig>
+      <transportprotocol>tcp</transportprotocol>
+    </sslprotocolConfig>
+  </protocolconfig>
+  <serverlist>
+    <ServerEntry>
+      <displayname i:nil="true" />
+      <fqdn>azuregateway-b89b0031-0298-4ee3-807e-1ae3a738ef48-52ff4eb13241.vpn.azure.com</fqdn>
+    </ServerEntry>
+  </serverlist>
+  <servervalidation>
+    <Cert>
+      <hash>DF3C24F9BFD666761B268073FE06D1CC8D4F82A4</hash>
+      <issuer i:nil="true" />
+    </Cert>
+    <serversecret>be066997b9cabe139201611ac0097eb3ff5fdcb7ee54243e22bda96f6201bdc60fbac1acf94b7925fde91258f2073b8e4ef1495193a8662f3575430c67e53852823b39b762bcacdff4419af823fd03cc7304aa1e15b86d1c20fa760f1ac719e0d4ba7d582e56aedb6cbc994fff3343e69a5e3775e6b0da1928e1382e31c2f99efaee00b50d64244545a4fcc59d3cb4304df046343662f445bacfb6e1832f476c8976c7e7796e4f35f17338d781fdd44b19e3df7f1322713634ddb3133c8526f98604662b6c9d1bead2bfbc27e03883beef1201e778c0f7dbafdbfb0a3f29ec71fc544adf963ed95dad0b82a2fc07019d369768b274025218773ecea84cda5d4b</serversecret>
+    <type>cert</type>
+  </servervalidation>
+  <version>1</version>
+</AzVpnProfile>

@@ -227,6 +227,36 @@ variable "bastion_subnet_address_prefix" {
   default     = "10.0.2.0/26"
 }
 
+variable "enable_vpn_gateway" {
+  description = "Enable a Point-to-Site VPN Gateway for remote client access to the VNet."
+  type        = bool
+  default     = false
+}
+
+variable "vpn_gateway_subnet_address_prefix" {
+  description = "The address prefix for the GatewaySubnet. Must be at least /27."
+  type        = string
+  default     = "10.0.4.0/27"
+}
+
+variable "vpn_client_address_pool" {
+  description = "The address space for VPN clients (P2S). Must not overlap with VNet address space."
+  type        = string
+  default     = "172.16.0.0/24"
+}
+
+variable "vpn_root_cert_data" {
+  description = "The Base64-encoded public certificate data for the VPN root CA (without BEGIN/END headers). Required when enable_vpn_gateway is true."
+  type        = string
+  default     = ""
+}
+
+variable "vpn_root_cert_name" {
+  description = "A friendly name for the VPN root certificate."
+  type        = string
+  default     = "P2SRootCert"
+}
+
 variable "boot_diagnostics" {
   description = "(Optional) Enable or Disable boot diagnostics"
   type        = bool

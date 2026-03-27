@@ -38,9 +38,13 @@ pipeline {
 
     stage('Init And Validate') {
       steps {
-        sh 'terraform fmt -check -recursive'
-        sh 'terraform init -input=false'
-        sh 'terraform validate'
+        withCredentials([
+          string(credentialsId: 'azure-tf-state-access-key', variable: 'ARM_ACCESS_KEY')
+        ]) {
+          sh 'terraform fmt -check -recursive'
+          sh 'terraform init -input=false'
+          sh 'terraform validate'
+        }
       }
     }
 
@@ -103,6 +107,7 @@ def deployEnvironment(String envName, String tfvarsFile, boolean runAnsible) {
     string(credentialsId: 'azure-arm-client-secret', variable: 'ARM_CLIENT_SECRET'),
     string(credentialsId: 'azure-arm-subscription-id', variable: 'ARM_SUBSCRIPTION_ID'),
     string(credentialsId: 'azure-arm-tenant-id', variable: 'ARM_TENANT_ID'),
+    string(credentialsId: 'azure-tf-state-access-key', variable: 'ARM_ACCESS_KEY'),
     sshUserPrivateKey(credentialsId: 'azure-vm-ssh-key', keyFileVariable: 'JENKINS_SSH_KEY', usernameVariable: 'JENKINS_SSH_USER')
   ]) {
     sh """#!/usr/bin/env bash

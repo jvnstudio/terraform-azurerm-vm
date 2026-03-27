@@ -11,6 +11,6 @@ ssh_key              = "~/.ssh/azure_rsa.pub"
 nb_public_ip         = 0
 public_ip_dns        = [""]
 enable_nat_gateway   = true
-enable_bastion       = true
+enable_bastion       = false
 enable_public_web_vm = true
 admin_source_ip      = null
